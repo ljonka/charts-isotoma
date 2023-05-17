@@ -29,18 +29,45 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           command:
             - socat
+          # define two versions of args, first one, if TUNNEL_HOST and TUNNEL_PORT is defined
+          # second one, if TUNNEL_HOST and TUNNEL_PORT is not definee
           args:
+          {{- if .Values.tunnel.useCustom }}
+            - "$(SOURCE_TUNNEL_TYPE):$(SOURCE_TUNNEL_PORT),reuseaddr,cert=$HOME/etc/socat/server.pem,cafile=$HOME/etc/socat/client.crt"
+            - "$(DEST_TUNNEL_TYPE):$(DEST_TUNNEL_PORT),reuseaddr,fork"
+          {{- else }}            
             - "TCP-LISTEN:$(TUNNEL_PORT),fork"
             - "TCP:$(TUNNEL_HOST):$(TUNNEL_PORT)"
+          {{- end }}
           env:
+          {{- if .Values.tunnel.useCustom }}  
+            - name: SOURCE_TUNNEL_TYPE
+              value: {{ required "Must specify a target source type for the tunnel." .Values.tunnel.source.type | quote }}
+            - name: SOURCE_TUNNEL_PORT
+              value: {{ required "Must specify a target source port for the tunnel." .Values.tunnel.source.port | quote }}
+            - name: DEST_TUNNEL_TYPE
+              value: {{ required "Must specify a target destination type for the tunnel." .Values.tunnel.destination.type | quote }}
+            - name: DEST_TUNNEL_PORT
+              value: {{ required "Must specify a target destination port for the tunnel." .Values.tunnel.destination.port | quote }}
+          {{- else }}
             - name: TUNNEL_HOST
               value: {{ required "Must specify a target host for the tunnel." .Values.tunnel.host | quote }}
             - name: TUNNEL_PORT
               value: {{ required "Must specify a target port for the tunnel." .Values.tunnel.port | quote }}
+          {{- end }}
           ports:
+          {{- if .Values.tunnel.useCustom }}
+            - name: source-tunnel-port
+              containerPort: {{ (int64 .Values.tunnel.source.port) }}
+              protocol: TCP
+            - name: destination-tunnel-port
+              containerPort: {{ (int64 .Values.tunnel.destination.port) }}
+              protocol: TCP
+          {{- else }}  
             - name: tunnel-port
               containerPort: {{ (int64 .Values.tunnel.port) }}
               protocol: TCP
+          {{- end }}
           resources:
 {{ toYaml .Values.resources | indent 12 }}
     {{- with .Values.nodeSelector }}

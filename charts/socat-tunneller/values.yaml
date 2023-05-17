@@ -2,7 +2,7 @@ replicaCount: 1
 
 image:
   repository: alpine/socat
-  tag: 1.0.5
+  tag: 1.7.4.4
   pullPolicy: IfNotPresent
 
 nameOverride: ""
@@ -24,3 +24,12 @@ podAnnotations: {}
 tunnel:
   host: myhost
   port: 9999
+  useCustom: false
+  source:
+    type: openssl-listen
+    port: 40240
+    key: ""
+    cert: ""
+  destination:
+    type: tcp-listen
+    port: 8888
